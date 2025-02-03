@@ -1,0 +1,107 @@
+# Submitting an Orca calculation
+
+This tutorial will show you how to submit an Orca job using the GilliardLab group directory. For tutorials related to running specific calculation types (Opt, Freq, TDDFT), see the respective tutorials. This guide provides a brief introduction to the workflow for running calculations for users with limited Linux experience.
+
+1. Create a directory called water_optfreq in your home directory and navigate into that directory:
+
+   ```
+   $ mkdir water_optfreq
+   ```
+
+   ```
+   $ cd water_optfreq
+   ```
+
+2. Create a new file with nano called water_optfreq.inp:
+
+   ```
+   nano water_optfreq.inp
+   ```
+
+   Copy and paste the following input into the file. Note that on most terminals, copy and paste are done using `Ctrl+Shift+C` and `Ctrl+Shift+V`, respectively.
+
+   ```
+   !  B3LYP def2-SVP TightSCF Opt Freq
+   %Maxcore 1000
+   %PAL
+       NProcs 4
+   end
+
+   * XYZ 0 1
+   O                  0.00000000    0.00000000   -0.11085125
+   H                  0.00000000   -0.78383672    0.44340501
+   H                 -0.00000000    0.78383672    0.44340501
+   *
+   ```
+
+   Save and exit nano with `Ctrl+O`, `enter`, `ctrl-X`
+
+3. We will now prepare the SLURM script to submit this job to the queuing system.
+
+   First, copy the slurm_orca600.sh script using the copyorca alias and name it slurm_01:
+
+   ```
+   $ copyorca slurm_01
+   ```
+
+   The template script `slurm_orca600.sh` was prepared with typical resource requests. However, for this simple job, we will need to edit the requested resources. Edit the `slurm_01` script to run on 4 cores with 6GB of memory for 2 minutes. Optionally, you can specify the input file name. Note that this uses a wildcard `*.inp`, which means it will run any file in the current directory that ends with `.inp`. Therefore, in this instance, it is not necessary, but we include it as an example. Focus on the first few lines of the script, which is everything above the dashed line.
+
+   Edit the `slurm_01` script with nano:
+
+   ```
+   $ nano slurm_01
+   ```
+
+   Modify the script as follows:
+
+   ```
+   #!/bin/bash
+   #SBATCH --nodes=1
+   #SBATCH --ntasks-per-node=4
+   #SBATCH --time=00:02:00
+   #SBATCH --mem=6GB
+   #SBATCH --output=/dev/null
+   use_scratch=false
+
+   input_files="water_optfreq.inp"
+
+   #=============================#
+   ...
+   ...
+   ...
+
+   ```
+
+   Save and exit nano with `Ctrl+O`, `Enter`, `Ctrl+X`.
+
+4) You are now ready to submit the job. Use the sbatch command followed by the SLURM script:
+
+   ```
+   $ sbatch slurm_01
+   ```
+
+   When you have submitted your job, the script will create a directory called water_optfreq_tmp in your current directory. The calculation will run inside this temporary directory. Once your job is finished, the output file will be copied back to the working directory. This job will take less than 2 minutes to complete. You will know the job has completed when the output is copied to your working directory.
+
+   You can check the contents of your directory with:
+
+   ```
+   $ ls
+   slurm_01  water_optfreq.inp  water_optfreq.out  water_optfreq_tmp
+   ```
+
+   To verify the job's completion, you can use the tail command on the output file. You should see \***\*ORCA TERMINATED NORMALLY\*\*** at the end of the file.
+
+   ```
+   $ tail water_optfreq.out
+   Timings for individual modules:
+
+   Sum of individual times         ...       16.211 sec (=   0.270 min)
+   GTO integral calculation        ...        2.967 sec (=   0.049 min)  18.3 %
+   SCF iterations                  ...        7.485 sec (=   0.125 min)  46.2 %
+   SCF Gradient evaluation         ...        3.150 sec (=   0.053 min)  19.4 %
+   Geometry relaxation             ...        0.196 sec (=   0.003 min)   1.2 %
+   Analytical frequency calculation...        2.413 sec (=   0.040 min)  14.9 %
+                                ****ORCA TERMINATED NORMALLY****
+   TOTAL RUN TIME: 0 days 0 hours 0 minutes 20 seconds 482 msec
+   ```
+
